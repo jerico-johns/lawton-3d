@@ -1,0 +1,118 @@
+<title>3932 Lawton Walkthrough</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: full-bleed 3D view; room strip along the bottom, plan in the top-right corner, mode buttons top-left. Single look. */
+:root{--bg:#e6e1d6;--ink:#25302b;--panel:#f7f4ecf0;--line:#25302b2e;--accent:#a5482a;--leaf:#3f5a47;
+ --display:"Avenir Next Condensed","Gill Sans",ui-sans-serif,sans-serif;--body:"Avenir Next",ui-sans-serif,system-ui,sans-serif}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{background:var(--bg);color:var(--ink);font:500 14px/1.35 var(--body);position:relative}
+#stage{position:fixed;inset:0}#stage canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#top{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;pointer-events:none}
+#top>*{pointer-events:auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px}
+#name{padding:8px 12px;min-width:0}#name h1{font:600 19px/1.1 var(--display);margin:0;letter-spacing:.01em}#name p{margin:2px 0 0;font-size:13px;font-variant-numeric:tabular-nums}
+#modes{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+button{font:600 13px/1 var(--body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:11px 12px;min-height:40px;cursor:pointer}
+button[aria-pressed="true"]{background:var(--leaf);color:#fff;border-color:var(--leaf)}button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#map{width:176px;height:112px;display:block;cursor:pointer}
+#bottom{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);display:flex;flex-direction:column;gap:8px;pointer-events:none}
+#rooms{display:flex;gap:6px;overflow-x:auto;pointer-events:auto;scrollbar-width:none}#rooms::-webkit-scrollbar{display:none}#rooms button{flex:none}
+#hint{align-self:flex-start;padding:7px 11px;font-size:13px;max-width:60ch}
+#joy{position:fixed;left:max(20px,env(safe-area-inset-left,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 118px);width:104px;height:104px;border-radius:50%;background:#f7f4ec99;border:1px solid var(--line);touch-action:none}
+#joy i{position:absolute;left:31px;top:31px;width:42px;height:42px;border-radius:50%;background:var(--leaf);opacity:.85}
+#tape{position:fixed;left:0;top:0;padding:6px 10px;font:600 15px/1 var(--body);font-variant-numeric:tabular-nums;background:var(--accent);color:#fff;border-radius:5px;pointer-events:none;transform:translate(-50%,-130%)}
+#load{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);font:600 18px var(--display)}
+@media(max-width:560px){#map{width:128px;height:82px}#name h1{font-size:16px}#modes button{padding:10px 9px;font-size:12px}}
+</style>
+<div id="stage"></div>
+<div id="top" class="pad">
+ <div><div id="name" class="card"><h1>3932 Lawton, main floor</h1><p id="where">Dining</p></div>
+  <div id="modes"><button id="bWalk" aria-pressed="true">Walk</button><button id="bDoll" aria-pressed="false">Dollhouse</button><button id="bTape" aria-pressed="false">Measure</button></div></div>
+ <canvas id="map" class="card" aria-label="Floor plan. Tap a room to go there."></canvas>
+</div>
+<div id="joy" hidden><i></i></div>
+<div id="tape" hidden></div>
+<div id="bottom" class="pad"><div id="hint" class="card"></div><div id="rooms"></div></div>
+<div id="load">Building the house…</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script>
+const H=/*HOUSE*/null, TILE="/*TILE*/";
+const $=i=>document.getElementById(i), b64=(s,T)=>{const a=atob(s),u=new Uint8Array(a.length);for(let i=0;i<a.length;i++)u[i]=a.charCodeAt(i);return new T(u.buffer)};
+const touch=matchMedia("(pointer:coarse)").matches;
+let R;try{R=new THREE.WebGLRenderer({antialias:true,powerPreference:"high-performance"})}catch(e){$("load").textContent="This browser cannot show 3D. Try Safari or Chrome with graphics turned on.";throw e}
+R.setPixelRatio(Math.min(devicePixelRatio,2));R.outputEncoding=THREE.sRGBEncoding;R.toneMapping=THREE.NoToneMapping;
+$("stage").appendChild(R.domElement);const C=R.domElement;
+const S=new THREE.Scene();S.background=new THREE.Color(0xcfdde6);
+const cam=new THREE.PerspectiveCamera(70,1,2,6000);cam.rotation.order="YXZ";
+function oak(){const c=document.createElement("canvas");c.width=c.height=512;const x=c.getContext("2d");let s=7;const r=()=>(s=(s*16807)%2147483647)/2147483647;
+ for(let i=0;i<16;i++){let y=-r()*300;while(y<512){const L=200+r()*260,k=.84+r()*.24;x.fillStyle=`rgb(${226*k|0},${222*k|0},${216*k|0})`;x.fillRect(i*32,y,32,L);
+  for(let g=0;g<9;g++){x.fillStyle=`rgba(70,35,10,${.03+r()*.06})`;x.fillRect(i*32+r()*31,y,1+r(),L)}x.fillStyle="rgba(40,18,6,.55)";x.fillRect(i*32,y,32,1.5);y+=L}x.fillStyle="rgba(40,18,6,.5)";x.fillRect(i*32,0,1.4,512)}
+ const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.encoding=THREE.sRGBEncoding;t.anisotropy=8;return t}
+const tOak=oak(),img=new Image(),tPap=new THREE.Texture(img);tPap.wrapS=tPap.wrapT=THREE.RepeatWrapping;tPap.encoding=THREE.sRGBEncoding;tPap.anisotropy=8;img.onload=()=>tPap.needsUpdate=true;img.src=TILE;
+const EXP=/*EXP*/1,solid=[],ceil=[],floors=[];
+for(const q of H.parts){const pi=b64(q.p,Int16Array),cb=b64(q.c,Uint8Array),n=q.n,pos=new Float32Array(n*3),col=new Float32Array(n*3),uv=new Float32Array(n*2);
+ for(let i=0;i<n;i++){const X=pi[3*i]/40,Y=pi[3*i+1]/40,Z=pi[3*i+2]/40;pos[3*i]=X;pos[3*i+1]=Z;pos[3*i+2]=-Y;for(let k=0;k<3;k++){const e=cb[3*i+k]/255,v=e*e*4*EXP;col[3*i+k]=q.emit?1:1.3*v/(v+.42)}
+  if(q.mat==="morris"){uv[2*i]=X/20.5;uv[2*i+1]=Z/17.9}else{uv[2*i]=X/36;uv[2*i+1]=-Y/72}}
+ const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.BufferAttribute(pos,3));g.setAttribute("color",new THREE.BufferAttribute(col,3));g.setAttribute("uv",new THREE.BufferAttribute(uv,2));g.setIndex(new THREE.BufferAttribute(b64(q.i,Uint32Array),1));g.computeBoundingSphere();
+ const m=new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide});m.color.setRGB(...q.rgb);
+ if(q.emit){m.color.multiplyScalar(Math.min(1.6,.75+.25*q.emit))}
+ if(q.mat==="oak"){m.map=tOak;m.color.multiplyScalar(1.2)}if(q.mat==="morris"){m.map=tPap;m.color.setRGB(1,1,1)}
+ if(q.mat==="glass"){m.transparent=true;m.opacity=.45}
+ const o=new THREE.Mesh(g,m);o.userData=q.grp;S.add(o);solid.push(o);if(q.grp==="ceil")ceil.push(o);if(q.grp==="floor"||/^rug/.test(q.mat)||q.grp==="rug")floors.push(o)}
+const gnd=new THREE.Mesh(new THREE.CircleGeometry(3000,48),new THREE.MeshBasicMaterial({color:0xa9aea2}));gnd.rotation.x=-Math.PI/2;gnd.position.y=-100;S.add(gnd);
+/* ---- state ---- */
+const EYE=64,P={x:57,z:139,yaw:0,pitch:-.12},O={t:.6,p:.75,d:innerWidth<innerHeight?900:520,cx:45,cz:140};let mode="walk",tape=false,pts=[],go=null,dirty=true;const keys={},joy={x:0,y:0};
+const bad=(x,z)=>H.solid.some(r=>{const dx=Math.max(r[0]-x,0,x-r[2]),dz=Math.max(r[1]-z,0,z-r[3]);return dx*dx+dz*dz<49});
+function step(dx,dz){const n=Math.max(1,Math.ceil(Math.hypot(dx,dz)/3));let hit=false;for(let i=0;i<n;i++){if(!bad(P.x+dx/n,P.z))P.x+=dx/n;else hit=true;if(!bad(P.x,P.z+dz/n))P.z+=dz/n;else hit=true}return hit}
+const roomAt=(x,z)=>{for(const k in H.rooms){const r=H.rooms[k];if(x>=r[0]&&x<=r[2]&&z>=r[1]&&z<=r[3])return k}return null};
+const fi=n=>{const t=Math.round(n*2)/2,f=Math.floor(t/12);let i=t-f*12;return(f?f+"′ ":"")+i+"″"};
+const VIEW={Living:[-18,120,1.0],Dining:[57,139,0],Kitchen:[153,70,-1.78],Hall:[-40,174,-1.57],"Front bedroom":[-66,172,2.35],Bath:[34,207,2.75],Primary:[100,172,-2.45],"Walk-in":[256,226,3.1]};
+function goRoom(k){const v=VIEW[k];if(!v)return;setMode("walk");[P.x,P.z,P.yaw]=v;P.pitch=k==='Bath'?-.45:-.13;go=null;
+ if(bad(P.x,P.z)){const r=H.rooms[k];outer:for(let d=2;d<70;d+=3)for(let a=0;a<6.28;a+=.3){const x=v[0]+d*Math.cos(a),z=v[1]+d*Math.sin(a);if(!bad(x,z)&&x>r[0]&&x<r[2]&&z>r[1]&&z<r[3]){P.x=x;P.z=z;break outer}}}dirty=true}
+for(const k of Object.keys(VIEW)){const b=document.createElement("button");b.textContent=k;b.dataset.k=k;b.onclick=()=>goRoom(k);$("rooms").append(b)}
+const HINT={walk:touch?"Drag to look. Use the round pad to walk, or tap the floor to go there.":"Drag to look. Walk with W A S D or the arrow keys (hold Shift to go faster), or click the floor to go there.",doll:touch?"Drag to turn, pinch to zoom. Tap a floor to step inside.":"Drag to turn, scroll to zoom. Click a floor to step inside.",tape:"Pick two points to measure between them."};
+function hint(){$("hint").textContent=tape?HINT.tape:HINT[mode]}
+function setMode(m){mode=m;$("bWalk").setAttribute("aria-pressed",m==="walk");$("bDoll").setAttribute("aria-pressed",m==="doll");ceil.forEach(o=>o.visible=m==="walk");$("joy").hidden=!(touch&&m==="walk");hint();dirty=true}
+$("bWalk").onclick=()=>setMode("walk");$("bDoll").onclick=()=>setMode("doll");
+$("bTape").onclick=()=>{tape=!tape;$("bTape").setAttribute("aria-pressed",tape);if(!tape)clearTape();hint()};
+/* ---- tape measure ---- */
+const ln=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0xa5482a,depthTest:false}));ln.renderOrder=9;ln.visible=false;S.add(ln);const dots=[0,1].map(()=>{const d=new THREE.Mesh(new THREE.SphereGeometry(1.2,14,10),new THREE.MeshBasicMaterial({color:0xa5482a,depthTest:false}));d.renderOrder=9;d.visible=false;S.add(d);return d});
+function clearTape(){pts=[];ln.visible=false;dots.forEach(d=>d.visible=false);$("tape").hidden=true;dirty=true}
+function addPt(p){if(pts.length===2)clearTape();pts.push(p);dots[pts.length-1].position.copy(p);dots[pts.length-1].visible=true;if(pts.length===2){ln.geometry.setFromPoints(pts);ln.visible=true}dirty=true}
+function label(){const t=$("tape");if(pts.length<2){t.hidden=true;return}const m=pts[0].clone().lerp(pts[1],.5).project(cam);t.hidden=m.z>1;t.textContent=fi(pts[0].distanceTo(pts[1]));t.style.left=(m.x+1)/2*C.clientWidth+"px";t.style.top=(1-m.y)/2*C.clientHeight+"px"}
+/* ---- input ---- */
+const ray=new THREE.Raycaster(),ptr=new Map();let moved=0,pinch=0;
+function cast(e,list){const r=C.getBoundingClientRect();ray.setFromCamera({x:(e.clientX-r.left)/r.width*2-1,y:1-(e.clientY-r.top)/r.height*2},cam);return ray.intersectObjects(list.filter(o=>o.visible),false)[0]}
+C.addEventListener("pointerdown",e=>{C.setPointerCapture(e.pointerId);ptr.set(e.pointerId,[e.clientX,e.clientY]);if(ptr.size===1)moved=0;else moved=99;pinch=0});
+C.addEventListener("pointermove",e=>{const l=ptr.get(e.pointerId);if(!l)return;const dx=e.clientX-l[0],dy=e.clientY-l[1];moved+=Math.abs(dx)+Math.abs(dy);ptr.set(e.pointerId,[e.clientX,e.clientY]);
+ if(ptr.size===2){const [a,b]=[...ptr.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(pinch)O.d=Math.min(1400,Math.max(180,O.d*pinch/d));pinch=d;dirty=true;return}
+ if(mode==="walk"){const k=touch?.006:.0042;P.yaw+=dx*k;P.pitch=Math.max(-1.3,Math.min(1.3,P.pitch+dy*k))}else{O.t-=dx*.006;O.p=Math.max(.12,Math.min(1.45,O.p-dy*.005))}dirty=true});
+function up(e){if(!ptr.delete(e.pointerId))return;if(moved<7&&e.type==="pointerup"){const h=cast(e,solid);if(h){if(tape)addPt(h.point);else if(mode==="doll"){const f=cast(e,floors);if(f){P.x=f.point.x;P.z=f.point.z;if(!bad(P.x,P.z)){P.pitch=-.08;setMode("walk")}else{const k=roomAt(P.x,P.z);k&&goRoom(k)}}}else if(floors.includes(h.object))go=[h.point.x,h.point.z]}}}
+C.addEventListener("pointerup",up);C.addEventListener("pointercancel",up);
+C.addEventListener("wheel",e=>{e.preventDefault();if(mode==="doll"){O.d=Math.min(1400,Math.max(180,O.d*Math.exp(e.deltaY*.001)));dirty=true}},{passive:false});
+addEventListener("keydown",e=>{if(e.metaKey||e.ctrlKey)return;keys[e.code]=1;if(/^Arrow|Space/.test(e.code)&&e.target.tagName!=="BUTTON")e.preventDefault()});addEventListener("keyup",e=>keys[e.code]=0);addEventListener("blur",()=>{for(const k in keys)keys[k]=0});
+const J=$("joy"),nub=J.firstChild,js=e=>{const r=J.getBoundingClientRect();let x=(e.clientX-r.left-52)/40,y=(e.clientY-r.top-52)/40;const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}joy.x=x;joy.y=y;nub.style.transform=`translate(${x*30}px,${y*30}px)`};
+J.addEventListener("pointerdown",e=>{J.setPointerCapture(e.pointerId);js(e)});J.addEventListener("pointermove",e=>{if(J.hasPointerCapture(e.pointerId))js(e)});for(const t of["pointerup","pointercancel"])J.addEventListener(t,()=>{joy.x=joy.y=0;nub.style.transform=""});
+/* ---- plan ---- */
+const M=$("map"),B=[-206,-8,292,296];let ms=1,mx=0,my=0;
+function map(){const w=M.clientWidth,h=M.clientHeight,d=Math.min(devicePixelRatio,2);if(M.width!==w*d){M.width=w*d;M.height=h*d}const c=M.getContext("2d");c.setTransform(d,0,0,d,0,0);c.clearRect(0,0,w,h);ms=Math.min((w-12)/(B[2]-B[0]),(h-12)/(B[3]-B[1]));mx=(w-ms*(B[2]-B[0]))/2-ms*B[0];my=(h-ms*(B[3]-B[1]))/2-ms*B[1];
+ const cur=roomAt(P.x,P.z);for(const k in H.rooms){const r=H.rooms[k];c.fillStyle=k===cur?"#c9d3c2":"#e4dccb";c.fillRect(mx+ms*r[0],my+ms*r[1],ms*(r[2]-r[0]),ms*(r[3]-r[1]))}
+ c.fillStyle="#25302b";for(const r of H.solid)if(Math.min(r[2]-r[0],r[3]-r[1])<7.5&&Math.max(r[2]-r[0],r[3]-r[1])>8)c.fillRect(mx+ms*r[0],my+ms*r[1],Math.max(1,ms*(r[2]-r[0])),Math.max(1,ms*(r[3]-r[1])));
+ const x=mx+ms*P.x,y=my+ms*P.z;c.save();c.translate(x,y);c.rotate(-P.yaw);c.fillStyle="#a5482a44";c.beginPath();c.moveTo(0,0);c.arc(0,0,22,-Math.PI/2-.6,-Math.PI/2+.6);c.fill();c.fillStyle="#a5482a";c.beginPath();c.arc(0,0,4,0,7);c.fill();c.restore()}
+M.addEventListener("click",e=>{const r=M.getBoundingClientRect(),k=roomAt((e.clientX-r.left-mx)/ms,(e.clientY-r.top-my)/ms);k&&(VIEW[k]?goRoom(k):0)});
+/* ---- loop ---- */
+function size(){const w=innerWidth,h=innerHeight;R.setSize(w,h,false);cam.aspect=w/h;cam.fov=w<h?82:68;cam.updateProjectionMatrix();dirty=true}addEventListener("resize",size);size();
+let last=performance.now();
+function frame(t){requestAnimationFrame(frame);const dt=Math.min(.05,(t-last)/1000);last=t;
+ if(mode==="walk"){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)-joy.y,s=(keys.KeyD?1:0)-(keys.KeyA?1:0)+joy.x;const tr=(keys.ArrowLeft||keys.KeyQ?1:0)-(keys.ArrowRight||keys.KeyE?1:0);if(tr){P.yaw+=tr*1.9*dt;dirty=true}
+  if(f||s){go=null;const v=(keys.ShiftLeft||keys.ShiftRight?110:62)*dt,c=Math.cos(P.yaw),n=Math.sin(P.yaw);step((s*c-f*n)*v,(-f*c-s*n)*v);dirty=true}
+  else if(go){const dx=go[0]-P.x,dz=go[1]-P.z,l=Math.hypot(dx,dz),v=85*dt;if(l<3||(step(dx/l*Math.min(v,l),dz/l*Math.min(v,l))&&Math.hypot(go[0]-P.x,go[1]-P.z)>l-v*.2))go=null;dirty=true}
+ }
+ if(!dirty)return;dirty=false;
+ if(mode==="walk"){cam.position.set(P.x,EYE,P.z);cam.rotation.set(P.pitch,P.yaw,0)}else{cam.position.set(O.cx+O.d*Math.sin(O.t)*Math.sin(O.p),O.d*Math.cos(O.p),O.cz+O.d*Math.cos(O.t)*Math.sin(O.p));cam.lookAt(O.cx,20,O.cz)}
+ cam.updateMatrixWorld();R.render(S,cam);label();map();const k=roomAt(P.x,P.z),r=k&&H.rooms[k];$("where").textContent=mode==="doll"?"Ceiling off":k?`${k}, ${fi(r[2]-r[0])} × ${fi(r[3]-r[1])}`:"Doorway";
+ document.querySelectorAll("#rooms button").forEach(b=>b.setAttribute("aria-pressed",mode==="walk"&&b.dataset.k===k))}
+setMode("walk");img.decode?.().then(()=>dirty=true,()=>{});requestAnimationFrame(frame);$("load").remove();
+window.__w={cam,THREE,P,goRoom,setMode,bad,keys,O,H,go:()=>go,redraw:()=>dirty=true};
+</script>
