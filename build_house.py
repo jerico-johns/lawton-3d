@@ -115,7 +115,7 @@ def soft(m, c, size, e=.3, yaw=0, pitch=0, nu=24, nv=12):
 
 # Costco Aiden & Ivy Sydney modular, Cream (item 1987855). Costco's drawing: 40.1 deep, corner and arm modules 40.1 wide, armless 37.4,
 # 36.2 to the pillow tops, arms 25.5, seat 20, seat depth 26.7. Arm and back-frame thickness are read off the photo (about 7 and 8 in).
-SYD = dict(d=40.1, arm=40.1, less=37.4, corner=40.1, h=36.2, armh=25.5, seat=20, ta=7, tb=8)
+SYD = dict(d=40.1, arm=40.1, less=37.4, corner=40.1, h=36.2, armh=25.5, seat=20, ta=7, tb=8, ott=(37.4, 21.2))
 def sydney(u0=None, v0=2.0):
     q = SYD; cr = mat("sydneycream", (233, 227, 215), .95); L = (X(458) + 2) if u0 is None else u0; g = .25; d = q["d"]
     def module(o, w, side, arm=0, corner=False):
@@ -134,9 +134,12 @@ def sydney(u0=None, v0=2.0):
         if arm:
             cu, cv = T(x1 - 4.5, q["tb"] + 18); soft(cr, (cu, cv, 27.5), (20, 7, 15), .45, 90 if side == "w" else 0, 12 if side == "w" else -12)
         return o + w
-    e = module(0, q["corner"], "w", corner=True); e = module(e, q["less"], "w"); wall = module(e, q["arm"], "w", arm=1)
+    e = module(0, q["corner"], "w", corner=True); e = module(e, q["less"], "w"); e = module(e, q["less"], "w"); wall = module(e, q["arm"], "w", arm=1)
     win = module(q["corner"], q["arm"], "s", arm=1)
     soft(cr, (L + q["tb"] + 6, v0 + 23, q["h"] - 9.4), (27, 9, 18.5), .42, -90, 14)                            # corner's second back pillow
+    ot, oh = q["ott"]; a0, b0 = L + wall - ot, v0 + d + .6                                                      # ottoman as a chaise at the end seat
+    soft(cr, (a0 + ot / 2, b0 + ot / 2, 7.2), (ot - .4, ot - .4, 12.8), .14); soft(cr, (a0 + ot / 2, b0 + ot / 2, 12.6 + (oh - 12.6) / 2), (ot, ot, oh - 12.6), .3)
+    SOLID.append((a0, b0, a0 + ot, b0 + ot))
     SOLID.extend([(L, v0, L + wall, v0 + d), (L, v0, L + d, v0 + win)]); print(f"Sydney: window leg {win:.1f} in, wall leg {wall:.1f} in")
 
 def rooms():
@@ -144,9 +147,9 @@ def rooms():
     cab = mat("cab", (232, 230, 226), .5); linen = mat("linen", (228, 221, 208), .9); olive = mat("sofaolive", (104, 106, 68), .95); blk = mat("black", (18, 18, 19), .5); shade = mat("shade", (250, 226, 180), .9, emit=1.6)
     sydney()
     F = X(458)
-    furn("living", mat("rugL", (186, 158, 122), 1), F + 40, 40, .05, 108, 84, .4); furn("living", wal, F + 71, 70, 13, 60, 36, 2.5, True)
-    for a in (74, 125): 
-        for b in (73, 100): furn("living", wal, F + a, b, 0, 3, 3, 13)
+    furn("living", mat("rugL", (186, 158, 122), 1), F + 40, 40, .05, 108, 84, .4); furn("living", wal, F + 58, 70, 13, 50, 30, 2.5, True)     # placeholder table, 50 x 30
+    for a in (61, 102):
+        for b in (73, 94): furn("living", wal, F + a, b, 0, 3, 3, 13)
     furn("living", blk, F + 57, Y(470) - 2.4, 40, 66, 2, 37)
     # KITCHEN
     for a, b, c, d in ((1433, 258, 1483, 472), (1398, 420, 1433, 472), (1265, 420, 1333, 472)):
