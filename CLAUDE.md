@@ -34,14 +34,16 @@ bedrooms (east). z is up. Blender x = u, y = -v. Walls are traced in pixels of `
 `SOLID` so people cannot walk through them.
 
 ## How accurate it is
-Walls are traced, so about +-3 in. Assumed, not measured: 109 in ceilings everywhere, most door and window heights, sofa depth 42 in, chair
+Walls are traced, so about +-3 in. Assumed, not measured: 109 in ceilings everywhere, most door and window heights, sofa arm and back-frame thickness, chair
 height 31 in, lantern 30 in. Ceilings outside the dining room are flat. The spiral is approximate. Daylight is one fixed setting, not a sun
 study. Not modeled: attic, garage, yard, interior door leaves. When someone gives a tape measurement, use it and note it here.
 
 ## Design rules so far (ask before changing one)
 - Keep the existing black spiral stair. Kitchen cabinets stay white. Dining walls are greige (#CFC9BE) with white wainscot and trim.
 - Dining west wall: William Morris Pimpernel-style paper (20.5 in roll, 17.9 in repeat). Tate console 64.5 x 16 x 30, table 80 x 37.
-- Living: Pottery Barn Dream sectional in olive, 86 x 120.
+- Living: Costco Aiden & Ivy Sydney 6-piece modular in Cream (bought Nov 2026, item 1987855), `sydney()` in `build_house.py`. All six pieces:
+  corner + arm under the windows (80.2 in; that leg must stay under 102 in to clear the front door), corner + 2 armless + arm on the lot-line
+  wall (155 in, owners' choice), ottoman as a chaise at the end seat (Claude's placement, not confirmed). The coffee table (50 x 30), rug and TV are placeholders.
 - No brass, no poufs, no picture lights, no busy pattern except the Morris paper. Blue is fine.
 - Palette: terracotta, burnt orange, some yellow, olive, plants, walnut. Each room has its own personality.
 - Show options before rendering, and link any product by name.

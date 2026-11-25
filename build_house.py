@@ -98,21 +98,58 @@ def furn(g, m, u, v, z, w, d, h, solid=False):
     if solid: SOLID.append((u, v, u + w, v + d))
     return box(g, m, u, v, z, w, d, h)
 
+def soft(m, c, size, e=.3, yaw=0, pitch=0, nu=24, nv=12):
+    """Rounded, slightly stuffed block (superellipsoid): c = centre (u, v, z), size = full w, d, h; yaw/pitch in degrees."""
+    f = lambda w, k: math.copysign(abs(w) ** k, w); a, b, h = (x / 2 for x in size); cy, sy, cp, sp = math.cos(math.radians(yaw)), math.sin(math.radians(yaw)), math.cos(math.radians(pitch)), math.sin(math.radians(pitch))
+    vs, fs = [], []
+    for j in range(nv + 1):
+        t = -math.pi / 2 + math.pi * j / nv
+        for i in range(nu):
+            q = 2 * math.pi * i / nu; ct = f(math.cos(t), e)
+            x, y, z = a * ct * f(math.cos(q), e), b * ct * f(math.sin(q), e), h * f(math.sin(t), e)
+            y, z = y * cp - z * sp, y * sp + z * cp; x, y = x * cy - y * sy, x * sy + y * cy
+            vs.append(((c[0] + x) * IN, -(c[1] + y) * IN, (c[2] + z) * IN))
+    for j in range(nv):
+        for i in range(nu): fs.append(((j + 1) * nu + i, (j + 1) * nu + (i + 1) % nu, j * nu + (i + 1) % nu, j * nu + i))
+    me = bpy.data.meshes.new("soft"); me.from_pydata(vs, [], fs); me.update(); return D.add("soft", me, m)
+
+# Costco Aiden & Ivy Sydney modular, Cream (item 1987855). Costco's drawing: 40.1 deep, corner and arm modules 40.1 wide, armless 37.4,
+# 36.2 to the pillow tops, arms 25.5, seat 20, seat depth 26.7. Arm and back-frame thickness are read off the photo (about 7 and 8 in).
+SYD = dict(d=40.1, arm=40.1, less=37.4, corner=40.1, h=36.2, armh=25.5, seat=20, ta=7, tb=8, ott=(37.4, 21.2))
+def sydney(u0=None, v0=2.0):
+    q = SYD; cr = mat("sydneycream", (233, 227, 215), .95); L = (X(458) + 2) if u0 is None else u0; g = .25; d = q["d"]
+    def module(o, w, side, arm=0, corner=False):
+        """side 'w': back on the lot-line wall, o = start u; side 's': back on the street wall, o = start v. arm = 1 at the far end."""
+        T = (lambda a, b: (L + a, v0 + b)) if side == "w" else (lambda a, b: (L + b, v0 + a))
+        S_ = (lambda a, b, h: (a, b, h)) if side == "w" else (lambda a, b, h: (b, a, h))
+        blk = lambda a, b, z, wa, db, h, e=.14: soft(cr, (*T(a + wa / 2, b + db / 2), z + h / 2), S_(wa, db, h), e)
+        blk(o + g, 0, .8, w - 2 * g, d, 12.4); blk(o + g, 0, .8, w - 2 * g, q["tb"], q["armh"] - .8)            # base, back frame
+        x0, x1 = o + g, o + w - g
+        if arm: blk(o + w - q["ta"] - g, 0, .8, q["ta"], d, q["armh"] - .8); x1 -= q["ta"]
+        if corner: blk(o + g, 0, .8, q["tb"], d, q["armh"] - .8); x0 += q["tb"]
+        blk(x0, q["tb"], 12.2, x1 - x0, d - q["tb"] + .4, q["seat"] - 12.2, .3)                                 # seat cushion
+        def pillow(c, wd, yaw): soft(cr, c, (wd, 9, 18.5), .42, yaw, 14)
+        yw = 0 if side == "w" else -90
+        m = (x0 + x1) / 2; cu, cv = T(m, q["tb"] + 5.2); pillow((cu, cv, q["h"] - 9.4), x1 - x0 - .6, yw)
+        if arm:
+            cu, cv = T(x1 - 4.5, q["tb"] + 18); soft(cr, (cu, cv, 27.5), (20, 7, 15), .45, 90 if side == "w" else 0, 12 if side == "w" else -12)
+        return o + w
+    e = module(0, q["corner"], "w", corner=True); e = module(e, q["less"], "w"); e = module(e, q["less"], "w"); wall = module(e, q["arm"], "w", arm=1)
+    win = module(q["corner"], q["arm"], "s", arm=1)
+    soft(cr, (L + q["tb"] + 6, v0 + 23, q["h"] - 9.4), (27, 9, 18.5), .42, -90, 14)                            # corner's second back pillow
+    ot, oh = q["ott"]; a0, b0 = L + wall - ot, v0 + d + .6                                                      # ottoman as a chaise at the end seat
+    soft(cr, (a0 + ot / 2, b0 + ot / 2, 7.2), (ot - .4, ot - .4, 12.8), .14); soft(cr, (a0 + ot / 2, b0 + ot / 2, 12.6 + (oh - 12.6) / 2), (ot, ot, oh - 12.6), .3)
+    SOLID.append((a0, b0, a0 + ot, b0 + ot))
+    SOLID.extend([(L, v0, L + wall, v0 + d), (L, v0, L + d, v0 + win)]); print(f"Sydney: window leg {win:.1f} in, wall leg {wall:.1f} in")
+
 def rooms():
     wal = mat("walnut", (104, 68, 42), .5); white = mat("trim", (0,)*3); steel = mat("steel", (150, 150, 150), .4); quartz = mat("quartz", (236, 235, 232), .3)
     cab = mat("cab", (232, 230, 226), .5); linen = mat("linen", (228, 221, 208), .9); olive = mat("sofaolive", (104, 106, 68), .95); blk = mat("black", (18, 18, 19), .5); shade = mat("shade", (250, 226, 180), .9, emit=1.6)
-    # LIVING: PB Dream olive L, 86 (window) x 120 (lot-line wall), depth 42 assumed
-    L, Z = X(458) + 2, 2
-    for u, v, w, d in ((L, Z, 120, 42), (L, Z + 42, 42, 44)): furn("living", olive, u, v, 3, w, d, 14, True)
-    for u, v, w, d in ((L, Z, 120, 9), (L, Z + 9, 9, 77)): furn("living", olive, u, v, 17, w, d, 15)
-    furn("living", olive, L + 112, Z + 9, 17, 8, 33, 7); furn("living", olive, L + 9, Z + 78, 17, 33, 8, 7)
-    for i in range(3): furn("living", olive, L + 10 + 34 * i, Z + 10, 17, 33, 31, 5)
-    furn("living", olive, L + 10, Z + 43, 17, 31, 34, 5)
-    for u, v, c in ((L + 14, Z + 8, (176, 84, 52)), (L + 84, Z + 9, (196, 140, 58))): furn("living", mat(f"pil{c[0]}", c, .95), u, v, 22, 19, 6, 17)
+    sydney()
     F = X(458)
-    furn("living", mat("rugL", (186, 158, 122), 1), F + 40, 40, .05, 108, 84, .4); furn("living", wal, F + 71, 70, 13, 60, 36, 2.5, True)
-    for a in (74, 125): 
-        for b in (73, 100): furn("living", wal, F + a, b, 0, 3, 3, 13)
+    furn("living", mat("rugL", (186, 158, 122), 1), F + 40, 40, .05, 108, 84, .4); furn("living", wal, F + 58, 70, 13, 50, 30, 2.5, True)     # placeholder table, 50 x 30
+    for a in (61, 102):
+        for b in (73, 94): furn("living", wal, F + a, b, 0, 3, 3, 13)
     furn("living", blk, F + 57, Y(470) - 2.4, 40, 66, 2, 37)
     # KITCHEN
     for a, b, c, d in ((1433, 258, 1483, 472), (1398, 420, 1433, 472), (1265, 420, 1333, 472)):
@@ -176,7 +213,7 @@ def lights():
 
 def bake(samples, cell=8.0):
     """Flatten every quad into a grid, bake on an inset copy (so verts touching other walls do not go black)."""
-    P, PI, F, FM, FG = [], [], [], [], []; names = []; gs = []; grids = []
+    P, PI, F, FM, FG = [], [], [], [], []; names = []; gs = []; grids = []; SR = []
     BB = []
     for g in ("wall", "floor", "ceil"):
         for o in PARTS.get(g, []):
@@ -198,7 +235,7 @@ def bake(samples, cell=8.0):
     hidden = lambda q: bool(np.any(np.all((q > LO) & (q < HI), axis=1)))
     for g, obs in PARTS.items():
         for o in obs:
-            me = o.data; m = me.materials[0].name
+            me = o.data; m = me.materials[0].name; PG = len(P)
             if m not in names: names.append(m)
             if g not in gs: gs.append(g)
             for p in me.polygons:
@@ -224,6 +261,7 @@ def bake(samples, cell=8.0):
                     base = len(P)
                     for q in co: P.append(q); PI.append((cen, nrm, q))
                     for k in range(1, len(co) - 1): F.append((base, base + k, base + k + 1)); FM.append(names.index(m)); FG.append(gs.index(g))
+            if g == "soft": SR.append((PG, len(P)))
     inset = []
     for cen, nrm, q in PI:
         d = cen - q; L = np.linalg.norm(d); inset.append((q + d * (min(1.6, L * .3) / max(L, 1e-6)) + nrm * .25) * IN)
@@ -244,8 +282,10 @@ def bake(samples, cell=8.0):
             for dx in (0, 1, 2):
                 k = (2 - abs(dy - 1)) * (2 - abs(dx - 1)); num += k * gp[dy:dy + ny + 1, dx:dx + nx + 1]; den += k * wp[dy:dy + ny + 1, dx:dx + nx + 1]
         col[idx] = num / np.maximum(den, 1e-6)
+    SOFT = np.zeros(len(P), bool)
+    for a, b in SR: SOFT[a:b] = True
     key = {}                                    # weld light across boxes: same point + same facing share one value
-    for i in np.where(used)[0]: key.setdefault((*np.round(P[i], 1), *np.round(PI[i][1], 1)), []).append(i)
+    for i in np.where(used)[0]: key.setdefault((*np.round(P[i], 1), *(() if SOFT[i] else np.round(PI[i][1], 1))), []).append(i)
     for v in key.values():
         if len(v) > 1:
             g = [i for i in v if col[i].mean() > .012]; 
